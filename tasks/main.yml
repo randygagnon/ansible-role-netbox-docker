@@ -17,7 +17,6 @@
     - postgres.env
     - redis-cache.env
     - redis.env
-  notify: Restart netbox
 
 - name: Update configuration files
   ansible.builtin.template:
@@ -27,7 +26,6 @@
   loop:
     - docker-compose.yml
     - extra.py
-  notify: Restart netbox
 
 - name: Remove outdated files
   ansible.builtin.file:
@@ -37,3 +35,13 @@
     - netbox.env
     - configuration/configuration.py
     - configuration/gunicorn_config.py
+
+- name: Check if Netbox is running
+  community.docker.docker_container_info:
+    name: "{{ netbox_container_name }}"
+  register: netbox_container_status
+
+- name: Conditionally notify the Restart Netbox handler
+  ansible.builtin.command: echo "Restarting Netbox"
+  notify: Restart Netbox
+  when: not netbox_container_status.exists or netbox_container_status.docker_container.State.Running == false
